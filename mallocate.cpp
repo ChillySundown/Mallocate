@@ -30,6 +30,21 @@ void split_free_block(Block* ptr, size_t split_size) {
     new_block->next = ptr;
 }
 
+void merge_free_blocks() {
+    auto* current {heap_head};
+
+    while(current && current->next) {
+        if(current->free && current->next->free) {
+            // Block* new_block {current};
+            // new_block->size = current->size + current->next->size;
+            // new_block->free = true;
+            current->size += current->next->size + sizeof(Block);
+            current->next = current->next->next;
+        }
+        current = current->next;
+    }
+}
+
 void* mallocate(size_t bytes) {
     if(!heap_head) {
         init_heap();
@@ -60,7 +75,7 @@ void deallocate(void* ptr) {
 }
 
 int main() {
-    mallocate(16);
+    deallocate(mallocate(16));
     mallocate(64);
     std::cout << "Yeah it works ig";
     return 0;
