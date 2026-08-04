@@ -1,5 +1,7 @@
 #include <cstddef>
 #include "mallocate.h"
+#include <iostream>
+#include <sys/mman.h>
 
 constexpr size_t HEAP_SIZE {1024 * 1024}; //Represents the size of our heap in bytes
 alignas(8) static unsigned char heap[HEAP_SIZE]; //Our actual pool of memory
@@ -42,14 +44,24 @@ void* mallocate(size_t bytes) {
         if(w->free && w->size >= bytes) {
             split_free_block(w, bytes);
             w->free = false;
-            return reinterpret_cast<void*>(w);
+            return w + 1; //Moves past header to payload
         }
 
         w = w->next;
     }
+    return nullptr;
 }
 void deallocate(void* ptr) {
-
+    if(!ptr) {
+        return;
+    }
+    auto* new_header {reinterpret_cast<Block*>(ptr) - 1}; //Removes back by sizeof(Block) bytes and creates a new header
+    new_header->free = true;
 }
 
-
+int main() {
+    mallocate(16);
+    mallocate(64);
+    std::cout << "Yeah it works ig";
+    return 0;
+}
