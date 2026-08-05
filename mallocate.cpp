@@ -1,7 +1,4 @@
-#include <cstddef>
 #include "mallocate.h"
-#include <iostream>
-#include <sys/mman.h>
 
 constexpr size_t HEAP_SIZE {1024 * 1024}; //Represents the size of our heap in bytes
 alignas(8) static unsigned char heap[HEAP_SIZE]; //Our actual pool of memory
@@ -25,9 +22,12 @@ void split_free_block(Block* ptr, size_t split_size) {
     //Steps into memory payload, moves by split_size bytes, and creates a new header
     auto* new_block {reinterpret_cast<Block*>(reinterpret_cast<unsigned char*>(ptr + 1) + split_size)};
 
-    new_block->size = new_block->size - split_size - sizeof(Block*);
+    new_block->size = ptr->size - split_size - sizeof(Block);
     new_block->free = true;
-    new_block->next = ptr;
+    new_block->next = ptr->next;
+
+    ptr->next = new_block;
+    ptr->size = split_size;
 }
 
 void merge_free_blocks() {
@@ -46,12 +46,8 @@ void merge_free_blocks() {
 }
 
 void* mallocate(size_t bytes) {
-    if(!heap_head) {
-        init_heap();
-    } else if(bytes == 0) {
-        return nullptr;
-    }
-
+    if(bytes == 0) { return nullptr; }
+    if(!heap_head) { init_heap(); }
     bytes = align_up(bytes, alignof(double));
 
     auto* w = heap_head;
@@ -72,11 +68,28 @@ void deallocate(void* ptr) {
     }
     auto* new_header {reinterpret_cast<Block*>(ptr) - 1}; //Removes back by sizeof(Block) bytes and creates a new header
     new_header->free = true;
+    merge_free_blocks();
+}
+
+void print_heap() {
+    size_t i {};
+    auto* current {heap_head};
+
+    while(current) {
+        std::println("[Block {}]: {} {} bytes", ++i, current->free ? "free" : "in use", current->size);
+        current = current->next;
+    }
 }
 
 int main() {
-    deallocate(mallocate(16));
-    mallocate(64);
-    std::cout << "Yeah it works ig";
+    auto* a {mallocate(10)};
+    auto* b {mallocate(20)};
+    print_heap();
+    deallocate(a);
+    deallocate(b);
+
+    print_heap();
+    auto* c {mallocate(30)};
+
     return 0;
 }
