@@ -1,9 +1,10 @@
 #include "mallocate.h"
 
 constexpr size_t HEAP_SIZE {1024 * 1024}; //Represents the size of our heap in bytes
-alignas(8) static unsigned char heap[HEAP_SIZE]; //Our actual pool of memory
-static unsigned char* heap_ptr = heap; //pointer to our heap
+//alignas(8) static unsigned char heap[HEAP_SIZE]; //Our actual pool of memory
+static unsigned char* heap_ptr = static_cast<unsigned char*>(mmap(nullptr, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0)); //pointer to our heap
 
+FreeBlock* heap_cache[8] {nullptr};
 Block* heap_head {nullptr};
 
 void init_heap() {

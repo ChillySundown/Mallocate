@@ -8,5 +8,12 @@ struct Block {
     Block* prev {nullptr};
     Block* next {nullptr};
 }; 
+
+struct FreeBlock {
+    FreeBlock* next {nullptr};
+};
+
+constexpr int size_classes[] = {8, 16, 32, 64, 128, 256, 512, 1024};
+constexpr size_t MAX_ALLOC_CLASS = static_cast<size_t>(size_classes[7]);
 void* mallocate(size_t bytes);
 void deallocate(void* ptr);
