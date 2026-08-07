@@ -3,6 +3,8 @@
 constexpr size_t HEAP_SIZE {1024 * 1024}; //Represents the size of our heap in bytes
 //alignas(8) static unsigned char heap[HEAP_SIZE]; //Our actual pool of memory
 static unsigned char* heap_ptr = static_cast<unsigned char*>(mmap(nullptr, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0)); //pointer to our heap
+static unsigned char* meta_current {nullptr};
+static unsigned char* meta_end {nullptr};
 
 FreeBlock* heap_cache[8] {nullptr};
 Block* heap_head {nullptr};
@@ -12,6 +14,25 @@ void init_heap() {
    heap_head->free = true;
    heap_head->next = nullptr;
    heap_head->size = HEAP_SIZE - sizeof(Block);
+}
+
+void* meta_malloc(size_t bytes) {
+    size_t aligned_bytes = align_up(bytes, max_align_t);
+    if(!meta_current || meta_current + aligned_bytes > meta_end) {
+        void* mapped_mem = mmap(nullptr, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+        if(mapped_mem == MAP_FAILED) {
+            return nullptr;
+        } else {
+            meta_current = reinterpret_cast<unsigned char*>(mapped_mem);
+            meta_end = meta_current + HEAP_SIZE; 
+        }
+    }
+    if(meta_end - meta_current >= aligned_bytes) {
+            unsigned char* mem_start = meta_current;
+            meta_current += aligned_bytes;
+            return mem_start;
+    }
+    return nullptr; 
 }
 
 //Aligns bytes upward by given power
