@@ -19,7 +19,7 @@ void init_heap() {
 
 void* meta_malloc(size_t bytes) {
     if(bytes >= (SIZE_MAX - 16)) { //Checks to see if memory is near alignment limit
-        std::cout << "CANNOT ALLOCATE - MEMORY SIZE AT ALIGNMENT LIMIT" << std::endl;
+        //std::cout << "CANNOT ALLOCATE - MEMORY SIZE AT ALIGNMENT LIMIT" << std::endl; Need a thread-safe error message
         return nullptr;
     }
     size_t aligned_bytes = align_up(bytes, alignof(std::max_align_t));

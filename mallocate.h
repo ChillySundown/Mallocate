@@ -10,6 +10,10 @@ struct Block {
     Block* next {nullptr};
 }; 
 
+struct Span {
+
+};
+
 struct FreeBlock {
     FreeBlock* next {nullptr};
 };
