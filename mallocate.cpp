@@ -1,7 +1,8 @@
 #include "mallocate.h"
 
-constexpr size_t HEAP_SIZE {1024 * 1024}; //Represents the size of our heap in bytes
+constexpr size_t HEAP_SIZE {1024 * 1024}; //Represents the size of our heap in bytes (128 to be exact)
 //alignas(8) static unsigned char heap[HEAP_SIZE]; //Our actual pool of memory
+static const size_t page_size = sysconf(_SC_PAGESIZE);
 static unsigned char* heap_ptr = static_cast<unsigned char*>(mmap(nullptr, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0)); //pointer to our heap
 static unsigned char* meta_current {nullptr};
 static unsigned char* meta_end {nullptr};
@@ -17,22 +18,28 @@ void init_heap() {
 }
 
 void* meta_malloc(size_t bytes) {
-    size_t aligned_bytes = align_up(bytes, max_align_t);
-    if(!meta_current || meta_current + aligned_bytes > meta_end) {
-        void* mapped_mem = mmap(nullptr, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    if(bytes >= (SIZE_MAX - 16)) { //Checks to see if memory is near alignment limit
+        std::cout << "CANNOT ALLOCATE - MEMORY SIZE AT ALIGNMENT LIMIT" << std::endl;
+        return nullptr;
+    }
+    size_t aligned_bytes = align_up(bytes, alignof(std::max_align_t));
+    size_t mapped_bytes = std::max(HEAP_SIZE, align_up(aligned_bytes, page_size));
+    if(!meta_current || static_cast<size_t>(meta_end - meta_current) < aligned_bytes) {
+        void* mapped_mem = mmap(nullptr, mapped_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
         if(mapped_mem == MAP_FAILED) {
             return nullptr;
         } else {
             meta_current = reinterpret_cast<unsigned char*>(mapped_mem);
-            meta_end = meta_current + HEAP_SIZE; 
+            meta_end = meta_current + mapped_bytes; 
         }
     }
+
     if(meta_end - meta_current >= aligned_bytes) {
             unsigned char* mem_start = meta_current;
             meta_current += aligned_bytes;
             return mem_start;
     }
-    return nullptr; 
+    return nullptr;
 }
 
 //Aligns bytes upward by given power
