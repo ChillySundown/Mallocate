@@ -1,14 +1,21 @@
 #include "mallocate.h"
-
-constexpr size_t HEAP_SIZE {1024 * 1024}; //Represents the size of our heap in bytes (128 to be exact)
-//alignas(8) static unsigned char heap[HEAP_SIZE]; //Our actual pool of memory
-static const size_t page_size = sysconf(_SC_PAGESIZE);
 static unsigned char* heap_ptr = static_cast<unsigned char*>(mmap(nullptr, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0)); //pointer to our heap
 static unsigned char* meta_current {nullptr};
 static unsigned char* meta_end {nullptr};
 
-FreeBlock* heap_cache[8] {nullptr};
+FreeBlock* frontend_cache[8]; 
 Block* heap_head {nullptr};
+
+class PageMap {
+    private:
+        PageMapRoot map_root;
+    public:
+        Span* get(int page_id); //Returns Span* of where page is store
+        bool ensure(int start, int length);
+        void set(int page_id, Span* span);
+
+};
+
 
 void init_heap() {
    heap_head = reinterpret_cast<Block*>(heap_ptr); //Intializes our block linked list with ptr from our heap array
@@ -17,6 +24,7 @@ void init_heap() {
    heap_head->size = HEAP_SIZE - sizeof(Block);
 }
 
+//Memory allocator for Spans and other metadata
 void* meta_malloc(size_t bytes) {
     if(bytes >= (SIZE_MAX - 16)) { //Checks to see if memory is near alignment limit
         //std::cout << "CANNOT ALLOCATE - MEMORY SIZE AT ALIGNMENT LIMIT" << std::endl; Need a thread-safe error message
@@ -111,6 +119,7 @@ void print_heap() {
 }
 
 int main() {
+    std::cout << "Size of pages on Apple Silicon: " << page_size << std::endl;
     auto* a {mallocate(10)};
     auto* b {mallocate(20)};
     print_heap();
