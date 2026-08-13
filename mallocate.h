@@ -30,6 +30,14 @@ struct Block {
     Block* next {nullptr};
 }; 
 
+struct MetaArena {
+    unsigned char* meta_current {nullptr};
+    unsigned char* meta_end {nullptr};
+
+    void* allocate(size_t bytes);
+};
+
+
 struct FreeBlock { //Similar to block, but size is already known by size_class
     FreeBlock* next {nullptr};
 };
@@ -56,11 +64,7 @@ struct PageMapRoot {
     PageMapBranch* arr[PAGEMAP_ROOT_SIZE];
 };
 
-
-
-
 size_t align_up(size_t bytes, size_t align_up);
 void* meta_malloc(size_t bytes);
 void* mallocate(size_t bytes);
 void deallocate(void* ptr);
-size_t getPageID(void* pagePtr);

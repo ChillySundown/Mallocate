@@ -1,7 +1,6 @@
 #include "mallocate.h"
 static unsigned char* heap_ptr = static_cast<unsigned char*>(mmap(nullptr, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0)); //pointer to our heap
-static unsigned char* meta_current {nullptr};
-static unsigned char* meta_end {nullptr};
+static MetaArena meta_space; //Memory space for metadata
 
 FreeBlock* frontend_cache[8]; 
 Block* heap_head {nullptr};
@@ -24,8 +23,7 @@ void init_heap() {
    heap_head->size = HEAP_SIZE - sizeof(Block);
 }
 
-//Memory allocator for Spans and other metadata
-void* meta_malloc(size_t bytes) {
+void* MetaArena::allocate(size_t bytes) {
     if(bytes >= (SIZE_MAX - 16)) { //Checks to see if memory is near alignment limit
         //std::cout << "CANNOT ALLOCATE - MEMORY SIZE AT ALIGNMENT LIMIT" << std::endl; Need a thread-safe error message
         return nullptr;
@@ -48,6 +46,11 @@ void* meta_malloc(size_t bytes) {
             return mem_start;
     }
     return nullptr;
+}
+
+//Memory allocator for metadata
+void* meta_malloc(size_t bytes) {
+    return meta_space.allocate(bytes);
 }
 
 //Aligns bytes upward by given power
