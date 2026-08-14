@@ -52,18 +52,6 @@ struct Span {
     size_t size_class;
 };
 
-struct PageMapLeaf {
-    Span* arr[PAGEMAP_LEAF_SIZE];
-};
-
-struct PageMapBranch {
-    PageMapLeaf* arr[PAGEMAP_BRANCH_SIZE];
-};
-
-struct PageMapRoot {
-    PageMapBranch* arr[PAGEMAP_ROOT_SIZE];
-};
-
 size_t align_up(size_t bytes, size_t align_up);
 void* meta_malloc(size_t bytes);
 void* mallocate(size_t bytes);
