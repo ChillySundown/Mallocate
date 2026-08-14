@@ -40,7 +40,7 @@ void* MetaArena::allocate(size_t bytes) {
         }
     }
 
-    if(meta_end - meta_current >= aligned_bytes) {
+    if(static_cast<size_t>(meta_end - meta_current) >= aligned_bytes) {
             unsigned char* mem_start = meta_current;
             meta_current += aligned_bytes;
             return mem_start;
@@ -121,16 +121,16 @@ void print_heap() {
     }
 }
 
-int main() {
-    std::cout << "Size of pages on Apple Silicon: " << page_size << std::endl;
-    auto* a {mallocate(10)};
-    auto* b {mallocate(20)};
-    print_heap();
-    deallocate(a);
-    deallocate(b);
+// int main() {
+//     std::cout << "Size of pages on Apple Silicon: " << page_size << std::endl;
+//     auto* a {mallocate(10)};
+//     auto* b {mallocate(20)};
+//     print_heap();
+//     deallocate(a);
+//     deallocate(b);
 
-    print_heap();
-    auto* c {mallocate(30)};
+//     print_heap();
+//     auto* c {mallocate(30)};
 
-    return 0;
-}
+//     return 0;
+// }
