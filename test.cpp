@@ -34,3 +34,21 @@ TEST_CASE("Testing Meta Mallocs no memory overlap") {
         CHECK(allocs[i-1].first + allocs[i-1].second <= allocs[i].first);
     }
 }
+
+TEST_CASE("Testing if Meta Malloc memory is real") {
+    MetaArena meta_space;
+    std::vector<std::pair<unsigned char*, size_t>> allocs;
+    for(int i = 0; i < 2000; ++i) {
+        size_t n = 1 + (rand() % 200); //Randomly chooses n bytes
+        unsigned char* ptr = static_cast<unsigned char*>(meta_space.allocate(n));
+        REQUIRE(ptr != nullptr);
+        std::memset(ptr, i & 0xFF, n);
+        allocs.push_back({ptr, n});
+    }
+
+    for(size_t i = 0; i < allocs.size(); ++i) {
+        for(size_t j = 0; j < allocs[i].second; ++j) { //Checks to see if every byte was initalized to the first byte of i
+            REQUIRE(allocs[i].first[j] == static_cast<unsigned char>(i & 0xFF));
+        }
+    }
+}
