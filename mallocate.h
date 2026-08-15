@@ -1,3 +1,6 @@
+#ifndef MALLOCATE_H
+#define MALLOCATE_H
+
 #include <cstddef>
 #include <print>
 #include <iostream>
@@ -10,6 +13,8 @@ constexpr int K_PAGE_SHIFT {14};
 constexpr int PAGEMAP_ROOT_BITS {12};
 constexpr int PAGEMAP_BRANCH_BITS {9};
 constexpr int PAGEMAP_LEAF_BITS {13};
+
+extern MetaArena meta_space;
 
 static_assert(PAGEMAP_ROOT_BITS + PAGEMAP_BRANCH_BITS + PAGEMAP_LEAF_BITS == 34);
 
@@ -56,3 +61,5 @@ size_t align_up(size_t bytes, size_t align_up);
 void* meta_malloc(size_t bytes);
 void* mallocate(size_t bytes);
 void deallocate(void* ptr);
+
+#endif

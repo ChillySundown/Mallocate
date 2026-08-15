@@ -1,20 +1,10 @@
 #include "mallocate.h"
 #include "PageMap.h"
 static unsigned char* heap_ptr = static_cast<unsigned char*>(mmap(nullptr, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0)); //pointer to our heap
-static MetaArena meta_space; //Memory space for metadata
+MetaArena meta_space; //Memory space for metadata
 
 FreeBlock* frontend_cache[8]; 
 Block* heap_head {nullptr};
-
-class PageMap {
-    private:
-        PageMapRoot map_root;
-    public:
-        Span* get(int page_id); //Returns Span* of where page is store
-        bool ensure(int start, int length);
-        void set(int page_id, Span* span);
-
-};
 
 
 void init_heap() {
