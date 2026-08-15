@@ -1,14 +1,14 @@
 #include "PageMap.h"
 
-int getPageRootIdx(int page_id) {
+int getPageRootIdx(size_t page_id) {
     return page_id >> (PAGEMAP_BRANCH_BITS + PAGEMAP_LEAF_BITS) & (PAGEMAP_ROOT_SIZE-1);
 }
 
-int getPageBranchIdx(int page_id) {
+int getPageBranchIdx(size_t page_id) {
     return page_id >> (PAGEMAP_LEAF_BITS) & (PAGEMAP_LEAF_SIZE-1);
 }
 
-int getPageLeafIdx(int page_id) {
+int getPageLeafIdx(size_t page_id) {
     return page_id & (PAGEMAP_LEAF_SIZE-1);
 }
 
@@ -16,9 +16,9 @@ void PageMap::init_arena(MetaArena* arena) {
     mem_arena = arena;
 }
 
-Span* PageMap::get(int page_id) {
-    int root_idx = getPageRootIdx(page_id);
-    int branch_idx = getPageBranchIdx(page_id);
+Span* PageMap::get(size_t page_id) {
+    size_t root_idx = getPageRootIdx(page_id);
+    size_t branch_idx = getPageBranchIdx(page_id);
     int leaf_idx = getPageLeafIdx(page_id);
 
     auto* branch_entry = map_root->arr[root_idx];
@@ -29,7 +29,7 @@ Span* PageMap::get(int page_id) {
 
 }
 
-void PageMap::set(int page_id, Span* span) {
+void PageMap::set(size_t page_id, Span* span) {
     int root_idx = getPageRootIdx(page_id);
     int branch_idx = getPageBranchIdx(page_id);
     int leaf_idx = getPageLeafIdx(page_id);
@@ -39,19 +39,27 @@ void PageMap::set(int page_id, Span* span) {
     leaf_entry->arr[leaf_idx] = span;
 }
 
-bool PageMap::ensure(int start_page, int length) {
+bool PageMap::ensure(size_t start_page, size_t length) {
     assert(mem_arena != nullptr);
     int root_idx;
     int branch_idx;
     int leaf_idx;
+    /*
+    TODO: Make iteration chunked and remove unnecesary calculation of page indicies
+    */
     for(int idx = start_page; idx < start_page + length; idx++) {
            root_idx = getPageRootIdx(idx);
            branch_idx = getPageBranchIdx(idx);
            leaf_idx = getPageLeafIdx(idx);
 
            auto* root = map_root->arr[root_idx];
-           if(!root) {map_root->arr[root_idx] = static_cast<PageMapBranch*>(mem_arena->allocate(sizeof(PageMapBranch)));}
-
-
+           if(!root) {
+            map_root->arr[root_idx] = static_cast<PageMapBranch*>(mem_arena->allocate(sizeof(PageMapBranch)));
+           }
+           auto* branch = map_root->arr[root_idx];
+           auto* leaf = branch->arr[branch_idx];
+           if(!leaf) {
+                branch->arr[branch_idx] = static_cast<PageMapLeaf*>(mem_arena->allocate(sizeof(PageMapLeaf)));
+           }
     }
 }

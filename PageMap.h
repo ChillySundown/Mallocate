@@ -15,9 +15,9 @@ struct PageMapRoot {
     PageMapBranch* arr[PAGEMAP_ROOT_SIZE];
 };
 
-int getPageRootIdx(int page_id);
-int getPageBranchIdx(int page_id);
-int getPageLeafIdx(int page_id);
+int getPageRootIdx(size_t page_id);
+int getPageBranchIdx(size_t page_id);
+int getPageLeafIdx(size_t page_id);
 
 class PageMap {
     private:
@@ -25,9 +25,9 @@ class PageMap {
         MetaArena* mem_arena {nullptr};
     public:
         void init_arena(MetaArena* arena);
-        Span* get(int page_id); //Returns Span* of where page is store
-        bool ensure(int start, int length);
-        void set(int page_id, Span* span);
+        Span* get(size_t page_id); //Returns Span* of where page is store
+        bool ensure(size_t start, size_t length);
+        void set(size_t page_id, Span* span);
 };
 
 #endif
