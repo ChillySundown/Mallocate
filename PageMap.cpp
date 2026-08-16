@@ -12,6 +12,14 @@ int getPageLeafIdx(size_t page_id) {
     return page_id & (PAGEMAP_LEAF_SIZE-1);
 }
 
+size_t PageMap::getBytesAllocated() {
+    if(mem_arena) {
+        return mem_arena->byte_count;
+    } else {
+        return 0;
+    }
+}
+
 void PageMap::init_arena(MetaArena* arena) {
     mem_arena = arena;
 }
@@ -47,7 +55,7 @@ bool PageMap::ensure(size_t start_page, size_t length) {
     /*
     TODO: Make iteration chunked and remove unnecesary calculation of page indicies
     */
-    for(int idx = start_page; idx < start_page + length; idx++) {
+    for(int idx = start_page; idx < start_page + length; idx += PAGEMAP_LEAF_SIZE) {
            root_idx = getPageRootIdx(idx);
            branch_idx = getPageBranchIdx(idx);
            leaf_idx = getPageLeafIdx(idx);
@@ -62,4 +70,5 @@ bool PageMap::ensure(size_t start_page, size_t length) {
                 branch->arr[branch_idx] = static_cast<PageMapLeaf*>(mem_arena->allocate(sizeof(PageMapLeaf)));
            }
     }
+    return true;
 }

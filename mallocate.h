@@ -14,6 +14,14 @@ constexpr int PAGEMAP_ROOT_BITS {12};
 constexpr int PAGEMAP_BRANCH_BITS {9};
 constexpr int PAGEMAP_LEAF_BITS {13};
 
+struct MetaArena {
+    unsigned char* meta_current {nullptr};
+    unsigned char* meta_end {nullptr};
+    size_t byte_count {0};
+
+    void* allocate(size_t bytes);
+};
+
 extern MetaArena meta_space;
 
 static_assert(PAGEMAP_ROOT_BITS + PAGEMAP_BRANCH_BITS + PAGEMAP_LEAF_BITS == 34);
@@ -34,13 +42,6 @@ struct Block {
     Block* prev {nullptr};
     Block* next {nullptr};
 }; 
-
-struct MetaArena {
-    unsigned char* meta_current {nullptr};
-    unsigned char* meta_end {nullptr};
-
-    void* allocate(size_t bytes);
-};
 
 
 struct FreeBlock { //Similar to block, but size is already known by size_class

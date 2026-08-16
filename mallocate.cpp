@@ -34,6 +34,7 @@ void* MetaArena::allocate(size_t bytes) {
     if(static_cast<size_t>(meta_end - meta_current) >= aligned_bytes) {
             unsigned char* mem_start = meta_current;
             meta_current += aligned_bytes;
+            byte_count += aligned_bytes;
             return mem_start;
     }
     return nullptr;

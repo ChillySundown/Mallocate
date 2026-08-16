@@ -28,6 +28,7 @@ class PageMap {
         Span* get(size_t page_id); //Returns Span* of where page is store
         bool ensure(size_t start, size_t length);
         void set(size_t page_id, Span* span);
+        size_t getBytesAllocated();
 };
 
 #endif

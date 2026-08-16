@@ -1,6 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 #include "mallocate.h"
+#include "PageMap.h"
 #include <cmath>
 
 /*
@@ -50,5 +51,40 @@ TEST_CASE("Testing if Meta Malloc memory is real") {
         for(size_t j = 0; j < allocs[i].second; ++j) { //Checks to see if every byte was initalized to the first byte of i
             REQUIRE(allocs[i].first[j] == static_cast<unsigned char>(i & 0xFF));
         }
+    }
+}
+
+/*
+PageMap Tests
+- Idempotence Test
+*/
+
+TEST_CASE("Testing if PageMap operations are idempotent") {
+    PageMap p_map;
+    MetaArena meta_space;
+    p_map.init_arena(&meta_space);
+
+    SUBCASE("Overlapping page range should not allocate twice") {
+        size_t start = 1000;
+        size_t length = 40;
+        //First time ensuring
+        bool res1 = p_map.ensure(start, length);
+        size_t pre_second_call = p_map.getBytesAllocated(); 
+        //Second time ensuring
+        start = 1020;
+        bool res2 = p_map.ensure(start, length);
+        CHECK(p_map.getBytesAllocated() == pre_second_call);
+
+
+        //Edge Case
+        start = 8180;
+        length = 10;
+        bool res3 = p_map.ensure(start, length);
+        pre_second_call = p_map.getBytesAllocated();
+
+        start = 8180;
+        length = 20;
+        bool res4 = p_map.ensure(start, length);
+        CHECK(p_map.getBytesAllocated() == pre_second_call + sizeof(PageMapLeaf));
     }
 }
