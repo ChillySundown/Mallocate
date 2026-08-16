@@ -69,22 +69,33 @@ TEST_CASE("Testing if PageMap operations are idempotent") {
         size_t length = 40;
         //First time ensuring
         bool res1 = p_map.ensure(start, length);
+        //CHECK(sizeof(PageMapLeaf) == 65536);
         size_t pre_second_call = p_map.getBytesAllocated(); 
+        CHECK(pre_second_call != 0);
         //Second time ensuring
         start = 1020;
         bool res2 = p_map.ensure(start, length);
+        CHECK(p_map.getBytesAllocated() != 0);
         CHECK(p_map.getBytesAllocated() == pre_second_call);
+    }
 
-
-        //Edge Case
-        start = 8180;
-        length = 10;
-        bool res3 = p_map.ensure(start, length);
-        pre_second_call = p_map.getBytesAllocated();
-
-        start = 8180;
+    SUBCASE("Overlapping page ranges should be able to allocate additional pages") {
+        size_t start = 8180; 
+        size_t length = 10;
+        //First Call
+        bool res1 = p_map.ensure(start, length);
+        size_t prev_call = p_map.getBytesAllocated();
+        //Second Call
         length = 20;
-        bool res4 = p_map.ensure(start, length);
-        CHECK(p_map.getBytesAllocated() == pre_second_call + sizeof(PageMapLeaf));
+        bool res2 = p_map.ensure(start, length);
+        CHECK(p_map.getBytesAllocated() != 0);
+        CHECK(p_map.getBytesAllocated() == prev_call + sizeof(PageMapLeaf));
+
+        size_t two_leaves = prev_call + sizeof(PageMapLeaf);
+        start = 8200;
+        length = 1000;
+        bool res3 = p_map.ensure(start, length);
+        CHECK(p_map.getBytesAllocated() == two_leaves);
+
     }
 }

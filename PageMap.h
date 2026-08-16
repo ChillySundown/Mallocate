@@ -21,7 +21,7 @@ int getPageLeafIdx(size_t page_id);
 
 class PageMap {
     private:
-        PageMapRoot* map_root;
+        PageMapRoot map_root {};
         MetaArena* mem_arena {nullptr};
     public:
         void init_arena(MetaArena* arena);

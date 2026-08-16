@@ -29,7 +29,7 @@ Span* PageMap::get(size_t page_id) {
     size_t branch_idx = getPageBranchIdx(page_id);
     int leaf_idx = getPageLeafIdx(page_id);
 
-    auto* branch_entry = map_root->arr[root_idx];
+    auto* branch_entry = map_root.arr[root_idx];
     if(!branch_entry) {return nullptr;}
     auto* leaf_entry = branch_entry->arr[branch_idx];
     if(!leaf_entry) {return nullptr;}
@@ -42,7 +42,7 @@ void PageMap::set(size_t page_id, Span* span) {
     int branch_idx = getPageBranchIdx(page_id);
     int leaf_idx = getPageLeafIdx(page_id);
 
-    auto* branch_entry = map_root->arr[root_idx];
+    auto* branch_entry = map_root.arr[root_idx];
     auto* leaf_entry  = branch_entry->arr[branch_idx];
     leaf_entry->arr[leaf_idx] = span;
 }
@@ -52,19 +52,16 @@ bool PageMap::ensure(size_t start_page, size_t length) {
     int root_idx;
     int branch_idx;
     int leaf_idx;
-    /*
-    TODO: Make iteration chunked and remove unnecesary calculation of page indicies
-    */
-    for(int idx = start_page; idx < start_page + length; idx += PAGEMAP_LEAF_SIZE) {
+    for(int idx = start_page; idx < start_page + length; idx += (PAGEMAP_LEAF_SIZE - idx > 0) ? (PAGEMAP_LEAF_SIZE - idx) : PAGEMAP_LEAF_SIZE) {
            root_idx = getPageRootIdx(idx);
            branch_idx = getPageBranchIdx(idx);
            leaf_idx = getPageLeafIdx(idx);
 
-           auto* root = map_root->arr[root_idx];
+           auto* root = map_root.arr[root_idx];
            if(!root) {
-            map_root->arr[root_idx] = static_cast<PageMapBranch*>(mem_arena->allocate(sizeof(PageMapBranch)));
+            map_root.arr[root_idx] = static_cast<PageMapBranch*>(mem_arena->allocate(sizeof(PageMapBranch)));
            }
-           auto* branch = map_root->arr[root_idx];
+           auto* branch = map_root.arr[root_idx];
            auto* leaf = branch->arr[branch_idx];
            if(!leaf) {
                 branch->arr[branch_idx] = static_cast<PageMapLeaf*>(mem_arena->allocate(sizeof(PageMapLeaf)));
