@@ -69,11 +69,13 @@ TEST_CASE("Testing if PageMap operations are idempotent") {
         size_t length = 40;
         //First time ensuring
         bool res1 = p_map.ensure(start, length);
+        REQUIRE(res1 == true);
         size_t pre_second_call = p_map.getBytesAllocated(); 
         CHECK(pre_second_call != 0);
         //Second time ensuring
         start = 1020;
         bool res2 = p_map.ensure(start, length);
+        REQUIRE(res2 == true);
         CHECK(p_map.getBytesAllocated() != 0);
         CHECK(p_map.getBytesAllocated() == pre_second_call);
     }
@@ -103,12 +105,20 @@ TEST_CASE("Testing if PageMap operations are idempotent") {
         size_t length = 100;
         bool res1 = p_map.ensure(start, length);
         
-        Span* a;
-        a->starting_page_id = 0;
-        a->num_pages = 3;
-        p_map.set(a->starting_page_id, a);
+        Span a;
+        a.starting_page_id = 0;
+        a.num_pages = 3;
+        p_map.set(a.starting_page_id, &a);
 
-        Span* b = p_map.get(a->starting_page_id);
-        CHECK(a == b);
+        Span* b = p_map.get(a.starting_page_id);
+        CHECK(&a == b);
+        
+        Span c;
+        c.starting_page_id = 900;
+        a.num_pages = 1;
+        CHECK(p_map.get(c.starting_page_id) == nullptr);
+        
+
+        
     }
 }
