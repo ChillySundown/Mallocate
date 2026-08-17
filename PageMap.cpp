@@ -58,7 +58,7 @@ bool PageMap::ensure(size_t start_page, size_t length) {
 
         auto* branch = map_root.arr[root_idx];
         if(!branch) {
-            branch = reinterpret_cast<PageMapBranch*>(mem_arena->allocate(sizeof(PageMapBranch))); 
+            branch = static_cast<PageMapBranch*>(mem_arena->allocate(sizeof(PageMapBranch))); 
             if(branch) {
                 map_root.arr[root_idx] = branch;
             } else {
@@ -67,14 +67,12 @@ bool PageMap::ensure(size_t start_page, size_t length) {
         }
         auto* leaf = branch->arr[branch_idx];
         if(!leaf) {
-            PageMapLeaf* leaf_ptr = reinterpret_cast<PageMapLeaf*>(mem_arena->allocate(sizeof(PageMapLeaf)));
-            map_root.arr[root_idx]->arr[branch_idx] = leaf_ptr;
-            if(!leaf_ptr) {
-                return false; 
+            leaf = static_cast<PageMapLeaf*>(mem_arena->allocate(sizeof(PageMapLeaf)));
+            if(leaf) {
+                branch->arr[branch_idx] = leaf;
+            } else {
+                return false;
             }
-        }
-        else {
-            return false;
         }
         idx += std::min((PAGEMAP_LEAF_SIZE - leaf_idx), (end_idx - idx));
 
