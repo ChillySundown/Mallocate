@@ -49,23 +49,44 @@ void PageMap::set(size_t page_id, Span* span) {
 
 bool PageMap::ensure(size_t start_page, size_t length) {
     assert(mem_arena != nullptr);
-    int root_idx;
-    int branch_idx;
-    int leaf_idx;
-    for(int idx = start_page; idx < start_page + length; idx += (PAGEMAP_LEAF_SIZE - idx > 0) ? (PAGEMAP_LEAF_SIZE - idx) : PAGEMAP_LEAF_SIZE) {
-           root_idx = getPageRootIdx(idx);
-           branch_idx = getPageBranchIdx(idx);
-           leaf_idx = getPageLeafIdx(idx);
+    size_t idx = start_page;
+    size_t end_idx = idx + length;
+    while(idx < end_idx) {
+        size_t root_idx = getPageRootIdx(idx);
+        size_t branch_idx = getPageBranchIdx(idx);
+        size_t leaf_idx = getPageLeafIdx(idx);
 
-           auto* root = map_root.arr[root_idx];
-           if(!root) {
-            map_root.arr[root_idx] = static_cast<PageMapBranch*>(mem_arena->allocate(sizeof(PageMapBranch)));
-           }
-           auto* branch = map_root.arr[root_idx];
-           auto* leaf = branch->arr[branch_idx];
-           if(!leaf) {
-                branch->arr[branch_idx] = static_cast<PageMapLeaf*>(mem_arena->allocate(sizeof(PageMapLeaf)));
-           }
+        auto* branch = map_root.arr[root_idx];
+        if(!branch) {
+            branch = reinterpret_cast<PageMapBranch*>(mem_arena->allocate(sizeof(PageMapBranch))); 
+            if(branch) {
+                map_root.arr[root_idx] = branch;
+            } else {
+                return false;
+            }
+        }
+        auto* leaf = branch->arr[branch_idx];
+        if(!leaf) {
+            PageMapLeaf* leaf_ptr = reinterpret_cast<PageMapLeaf*>(mem_arena->allocate(sizeof(PageMapLeaf)));
+            map_root.arr[root_idx]->arr[branch_idx] = leaf_ptr;
+            if(!leaf_ptr) {
+                return false; 
+            }
+        }
+        else {
+            return false;
+        }
+        idx += std::min((PAGEMAP_LEAF_SIZE - leaf_idx), (end_idx - idx));
+
     }
     return true;
+}
+
+size_t PageMap::getSizeClass(size_t page_id) {
+    Span* s = get(page_id);
+    if(!s) {
+        return 0;
+    } else {
+        return s->size_class;
+    }
 }

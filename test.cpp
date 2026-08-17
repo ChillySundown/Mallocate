@@ -69,7 +69,6 @@ TEST_CASE("Testing if PageMap operations are idempotent") {
         size_t length = 40;
         //First time ensuring
         bool res1 = p_map.ensure(start, length);
-        //CHECK(sizeof(PageMapLeaf) == 65536);
         size_t pre_second_call = p_map.getBytesAllocated(); 
         CHECK(pre_second_call != 0);
         //Second time ensuring
@@ -97,5 +96,19 @@ TEST_CASE("Testing if PageMap operations are idempotent") {
         bool res3 = p_map.ensure(start, length);
         CHECK(p_map.getBytesAllocated() == two_leaves);
 
+    }
+
+    SUBCASE("Testing if get and set are idempotent") {
+        size_t start = 0;
+        size_t length = 100;
+        bool res1 = p_map.ensure(start, length);
+        
+        Span* a;
+        a->starting_page_id = 0;
+        a->num_pages = 3;
+        p_map.set(a->starting_page_id, a);
+
+        Span* b = p_map.get(a->starting_page_id);
+        CHECK(a == b);
     }
 }

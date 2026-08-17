@@ -29,6 +29,7 @@ class PageMap {
         bool ensure(size_t start, size_t length);
         void set(size_t page_id, Span* span);
         size_t getBytesAllocated();
+        size_t getSizeClass(size_t page_id);
 };
 
 #endif

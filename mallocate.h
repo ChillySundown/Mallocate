@@ -51,10 +51,10 @@ struct FreeBlock { //Similar to block, but size is already known by size_class
 struct Span {
     size_t starting_page_id;
     size_t num_pages;
-    Span* next;
-    Span* prev;
-    int8_t status;
-    FreeBlock* objects;
+    Span* next {nullptr};
+    Span* prev {nullptr};
+    SpanState status {SpanState::FREE};
+    FreeBlock* objects {nullptr};
     size_t size_class;
 };
 
