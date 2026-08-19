@@ -12,5 +12,6 @@ class PageHeap {
         void pageFree(Span* pages, size_t length);
 };
 
+Span* popPages(Span* s, size_t page_length);
 
 #endif

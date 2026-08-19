@@ -103,16 +103,6 @@ void deallocate(void* ptr) {
     merge_free_blocks();
 }
 
-void print_heap() {
-    size_t i {};
-    auto* current {heap_head};
-
-    while(current) {
-        std::println("[Block {}]: {} {} bytes", ++i, current->free ? "free" : "in use", current->size);
-        current = current->next;
-    }
-}
-
 // int main() {
 //     std::cout << "Size of pages on Apple Silicon: " << page_size << std::endl;
 //     auto* a {mallocate(10)};
