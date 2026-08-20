@@ -1,4 +1,5 @@
 #include "PageHeap.h"
+#include "globals.h"
 
 void PageHeap::init_arena(MetaArena* arena) {
     mem_arena = arena;
@@ -11,14 +12,17 @@ Span* PageHeap::popPages(size_t index, size_t page_length) {
         free_page_lists[index] = s->next;
         return s;
     } else {
+        PageMap& global_map = page_map();
         Span* new_span = static_cast<Span*>(mem_arena->allocate(sizeof(Span)));
         new_span->starting_page_id = s->starting_page_id + page_length;
         new_span->num_pages = page_length;
-
+        global_map.set(new_span->starting_page_id, new_span);
+        
         free_page_lists[index] = s->next;
         s->num_pages -= page_length;
         s->next = free_page_lists[s->num_pages - 1]; //Might cause index error
         free_page_lists[s->num_pages - 1] = s;
+        
 
         //s->starting_page_id -= page_length;
         return new_span;

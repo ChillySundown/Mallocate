@@ -1,5 +1,5 @@
-#ifndef MALLOCATE_H
-#define MALLOCATE_H
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
 
 #include <cstddef>
 #include <print>
@@ -7,24 +7,12 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-enum class SpanState : uint8_t {FREE, IN_USE, LARGE_OBJ};
-
 constexpr int K_PAGE_SHIFT {14};
 constexpr size_t K_PAGE_SIZE {1 << K_PAGE_SHIFT};
 
 constexpr int PAGEMAP_ROOT_BITS {12};
 constexpr int PAGEMAP_BRANCH_BITS {9};
 constexpr int PAGEMAP_LEAF_BITS {13};
-
-struct MetaArena {
-    unsigned char* meta_current {nullptr};
-    unsigned char* meta_end {nullptr};
-    size_t byte_count {0};
-
-    void* allocate(size_t bytes);
-};
-
-extern MetaArena meta_space;
 
 static_assert(PAGEMAP_ROOT_BITS + PAGEMAP_BRANCH_BITS + PAGEMAP_LEAF_BITS == 34);
 
@@ -38,31 +26,14 @@ constexpr size_t HEAP_SIZE {1024 * 1024}; //Represents the size of our heap in b
 static const size_t page_size = sysconf(_SC_PAGESIZE);
 constexpr size_t K_MAX_SIZE = static_cast<size_t>(size_classes[7]);
 
-struct Block {
-    size_t size {};
-    bool free {};
-    Block* prev {nullptr};
-    Block* next {nullptr};
-}; 
+// struct Block {
+//     size_t size {};
+//     bool free {};
+//     Block* prev {nullptr};
+//     Block* next {nullptr};
+// }; 
 
-
-struct FreeBlock { //Similar to block, but size is already known by size_class
-    FreeBlock* next {nullptr};
-};
-
-struct Span {
-    size_t starting_page_id;
-    size_t num_pages;
-    Span* next {nullptr};
-    Span* prev {nullptr};
-    SpanState status {SpanState::FREE};
-    FreeBlock* objects {nullptr};
-    size_t size_class;
-};
-
-size_t align_up(size_t bytes, size_t align_up);
-void* meta_malloc(size_t bytes);
-void* mallocate(size_t bytes);
-void deallocate(void* ptr);
+// void* mallocate(size_t bytes);
+// void deallocate(void* ptr);
 
 #endif

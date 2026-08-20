@@ -1,8 +1,11 @@
 #ifndef PAGEMAP_H
 #define PAGEMAP_H
 
-#include "mallocate.h"
+#include "MetaArena.h"
 #include <cassert>
+
+struct Span;
+
 struct PageMapLeaf {
     Span* arr[PAGEMAP_LEAF_SIZE];
 };
@@ -22,8 +25,8 @@ int getPageLeafIdx(size_t page_id);
 class PageMap {
     private:
         PageMapRoot map_root {};
-        MetaArena* mem_arena {nullptr};
     public:
+        MetaArena* mem_arena {nullptr};
         void init_arena(MetaArena* arena);
         Span* get(size_t page_id); //Returns Span* of where page is store
         bool ensure(size_t start, size_t length);

@@ -1,4 +1,7 @@
 #include "PageMap.h"
+#include "constants.h"
+#include "Span.h"
+#include "globals.h"
 
 int getPageRootIdx(size_t page_id) {
     return page_id >> (PAGEMAP_BRANCH_BITS + PAGEMAP_LEAF_BITS) & (PAGEMAP_ROOT_SIZE-1);
