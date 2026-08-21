@@ -1,4 +1,6 @@
 #include <cstddef>
+#ifndef META_ARENA_H
+#define META_ARENA_H
 struct MetaArena {
     unsigned char* meta_current {nullptr};
     unsigned char* meta_end {nullptr};
@@ -6,3 +8,4 @@ struct MetaArena {
 
     void* allocate(size_t bytes);
 };
+#endif

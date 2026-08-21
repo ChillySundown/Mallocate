@@ -1,6 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
-#include "mallocate.h"
+#include "globals.h"
 #include "PageMap.h"
 #include <cmath>
 

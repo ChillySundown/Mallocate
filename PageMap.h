@@ -2,6 +2,7 @@
 #define PAGEMAP_H
 
 #include "MetaArena.h"
+#include "constants.h"
 #include <cassert>
 
 struct Span;

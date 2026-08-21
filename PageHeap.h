@@ -1,13 +1,14 @@
 #ifndef PAGEHEAP_H
 #define PAGEHEAP_H
 
-#include "MetaArena.h"
 #include "Span.h"
 #include "PageMap.h"
 class PageHeap {
     private:
         //Something something mutex
         Span* popPages(size_t index, size_t page_length);
+        void insertPages(size_t index, Span* s);
+        bool refillPageHeap(size_t page_size);
         Span* free_page_lists[256] {nullptr};
     public: 
         MetaArena* mem_arena {nullptr};

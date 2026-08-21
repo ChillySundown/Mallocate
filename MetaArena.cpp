@@ -1,4 +1,3 @@
-#include "MetaArena.h"
 #include "constants.h"
 #include "globals.h"
 

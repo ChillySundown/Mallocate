@@ -1,4 +1,7 @@
 #include <cstddef>
+#include <cstdint>
+#ifndef SPAN_H
+#define SPAN_H
 
 enum class SpanState : uint8_t {FREE, IN_USE, LARGE_OBJ};
 
@@ -15,3 +18,5 @@ struct Span {
     FreeBlock* objects {nullptr};
     size_t size_class;
 };
+
+#endif

@@ -23,6 +23,9 @@ constexpr size_t PAGEMAP_LEAF_SIZE = 1ull << PAGEMAP_LEAF_BITS;
 constexpr int size_classes[] = {8, 16, 32, 64, 128, 256, 512, 1024};
 constexpr size_t HEAP_SIZE {1024 * 1024}; //Represents the size of our heap in bytes (128 to be exact)
 //alignas(8) static unsigned char heap[HEAP_SIZE]; //Our actual pool of memory
+constexpr size_t PAGEHEAP_REFILL_SIZE {2048 * K_PAGE_SIZE};
+
+
 static const size_t page_size = sysconf(_SC_PAGESIZE);
 constexpr size_t K_MAX_SIZE = static_cast<size_t>(size_classes[7]);
 
