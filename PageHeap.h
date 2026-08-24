@@ -11,6 +11,9 @@ class PageHeap {
         void unlinkPages(Span* s);
         bool refillPageHeap(size_t page_size);
         Span* free_page_lists[256] {nullptr};
+        Span* free_spans {nullptr};
+        Span* popFreeSpan();
+        void pushFreeSpan(Span* s);
     public: 
         MetaArena* mem_arena {nullptr};
         void init_arena(MetaArena* arena);

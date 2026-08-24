@@ -5,6 +5,19 @@ void PageHeap::init_arena(MetaArena* arena) {
     mem_arena = arena;
 }
 
+Span* PageHeap::popFreeSpan() {
+    if(!free_spans) {return nullptr;}
+    Span* s = free_spans;
+    free_spans = free_spans->next;
+    free_spans->prev = nullptr;
+    return s;
+}
+
+void PageHeap::pushFreeSpan(Span* s) {
+    free_spans->prev = s;
+    s->next = free_spans;
+}
+
 
 //Pushes a Span onto free_list[index]
 void PageHeap::pushPages(size_t index, Span* s) {
@@ -51,6 +64,10 @@ Span* PageHeap::popPages(size_t index, size_t page_length) {
     //Assume that s->num_pages will never be smaller than page_length
     Span* s = free_page_lists[index];
     PageMap& global_map = page_map();
+
+    //If num_pages is free, return the span
+    if(s->num_pages == page_length) {return s;}
+
     Span* new_span = static_cast<Span*>(mem_arena->allocate(sizeof(Span)));
     if(!new_span) {return nullptr;}
     new_span->starting_page_id = (s->starting_page_id + s->num_pages) - page_length;
