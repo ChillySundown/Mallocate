@@ -3,19 +3,24 @@
 
 #include "Span.h"
 #include "PageMap.h"
+
+
 class PageHeap {
     private:
         //Something something mutex
-        Span* popPages(size_t index, size_t page_length);
-        void pushPages(size_t index, Span* s);
-        void unlinkPages(Span* s);
-        bool refillPageHeap(size_t page_size);
         Span* free_page_lists[256] {nullptr};
         Span* free_spans {nullptr};
+
+        void unlinkPages(Span* s);
+        bool refillPageHeap(size_t page_size);
         Span* popFreeSpan();
         void pushFreeSpan(Span* s);
+        Span* popPages(size_t index, size_t page_length);
+        void pushPages(size_t index, Span* s);
+        void mergeSpans(Span* s, Span* r);
     public: 
         MetaArena* mem_arena {nullptr};
+        PageMap* pm {nullptr};
         void init_arena(MetaArena* arena);
         Span* pageAlloc(size_t num_pages);
         void pageFree(Span* pages);

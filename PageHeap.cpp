@@ -20,8 +20,9 @@ void PageHeap::pushFreeSpan(Span* s) {
 
 
 //Pushes a Span onto free_list[index]
-void PageHeap::pushPages(size_t index, Span* s) {
-    index = std::min(index, static_cast<size_t>(255));
+void PageHeap::pushPages(size_t page_size, Span* s) {
+    assert(page_size != 0);
+    size_t index = std::min(page_size-1, static_cast<size_t>(255));
     s->next = free_page_lists[index]; //Might cause index error
     free_page_lists[index]->prev = s;
     free_page_lists[index] = s;
@@ -42,8 +43,7 @@ bool PageHeap::refillPageHeap(size_t page_size) {
         return false;
     }
 
-    PageMap& global_map = page_map();
-    bool ensure_pagemap = global_map.ensure(start, length);
+    bool ensure_pagemap = pm->ensure(start, length);
     if(!ensure_pagemap) {return false;}
 
     new_span->starting_page_id = start;
@@ -51,11 +51,9 @@ bool PageHeap::refillPageHeap(size_t page_size) {
     //All spans default state is SpanState::FREE
 
     for(size_t idx = start; idx < (start + length); idx++) {
-        global_map.set(idx, new_span);
+        pm->set(idx, new_span);
     }
-    
-    size_t reloc_index = new_span->num_pages - 1;
-    pushPages(reloc_index, new_span);
+    pushPages(new_span->num_pages, new_span);
     return true;
 }
 
@@ -66,8 +64,13 @@ Span* PageHeap::popPages(size_t index, size_t page_length) {
     PageMap& global_map = page_map();
 
     //If num_pages is free, return the span
-    if(s->num_pages == page_length) {return s;}
+    if(s->num_pages == page_length) {
+        free_page_lists[index] = free_page_lists[index]->next;
+        free_page_lists[index]->prev == nullptr;
+        return s;
+    }
 
+    //If greater page size than requested, carve from span and return new span
     Span* new_span = static_cast<Span*>(mem_arena->allocate(sizeof(Span)));
     if(!new_span) {return nullptr;}
     new_span->starting_page_id = (s->starting_page_id + s->num_pages) - page_length;
@@ -78,17 +81,17 @@ Span* PageHeap::popPages(size_t index, size_t page_length) {
         global_map.set(new_span->starting_page_id, new_span);
     }
     
-    free_page_lists[index] = s->next;
-    s->num_pages -= page_length;
-    size_t reloc_index = s->num_pages - 1;
-    pushPages(reloc_index, s);
+    //Relocate span to new region
+    free_page_lists[index] = free_page_lists[index]->next;
+    s->num_pages -= page_length; 
+    pushPages(s->num_pages, s);
 
     //s->starting_page_id -= page_length;
     return new_span;
 }
 
 void PageHeap::unlinkPages(Span* s) {
-    assert(s == nullptr);
+    assert(s != nullptr);
     size_t idx = s->num_pages-1;
     if(s == free_page_lists[idx]) {
         free_page_lists[idx] = s->next; //Uhh what if we keep moving head forward and have memory leak
@@ -105,10 +108,7 @@ Span* PageHeap::pageAlloc(size_t page_size) {
     else if(size_index > 255) { size_index = 255;} //List of large pages
     
     if(free_page_lists[size_index]) { //First: try to pop from respective page list
-        Span* s = free_page_lists[size_index];
-        free_page_lists[size_index] = s->next;
-        return s;
-
+        return popPages(size_index, page_size);
     } else {
         while(size_index < 255) { //Second: Iterate through all larger page lists until a free page is found
             if(free_page_lists[size_index] != nullptr) {
@@ -119,10 +119,11 @@ Span* PageHeap::pageAlloc(size_t page_size) {
         }
     }
 
+    //If the pageheap is empty
     if(!refillPageHeap(page_size)) {
         return nullptr;
     } else {
-        return pageAlloc(page_size);
+        return pageAlloc(page_size); //Recursion might give us some trouble
     }
      //Temporary -- //Third: Allocate a chunk of memory that can be sliced and diced for pages
 
@@ -131,39 +132,40 @@ Span* PageHeap::pageAlloc(size_t page_size) {
 void PageHeap::pageFree(Span* pages) {
     //Check
     //Set pages->state to FREE eventually
-    PageMap& global_map = page_map();
+    if(!pages) {return;}
+    pages->status = SpanState::FREE;
 
     size_t start = pages->starting_page_id;
     size_t len = pages->num_pages;
 
     Span* current = pages;
-    pages->status = SpanState::FREE;
     if(pages->starting_page_id > 0) {
         size_t prev_page_id = pages->starting_page_id - 1;
-        Span* prev_pages = global_map.get(prev_page_id);
+        Span* prev_pages = pm->get(prev_page_id);
+
+        //If prev_page is ALSO free, merge pages
         if(prev_pages && prev_pages->status == SpanState::FREE) {
-            //Remove prev_page from free_list
+            unlinkPages(prev_pages);
             prev_pages->num_pages += pages->num_pages;
             for(size_t idx = start; idx < (start + len); idx++) {
-                global_map.set(idx, prev_pages);
-            }
-            unlinkPages(prev_pages);
-            unlinkPages(pages);
+                pm->set(idx, prev_pages);
+            }   
+            //unlinkPages(pages); RETIRE
             current = prev_pages;
         }
     }
 
-    Span* next_pages = global_map.get(current->starting_page_id + current->num_pages);
-    start = next_pages->starting_page_id;
-    len = next_pages->num_pages;
+    Span* next_pages = pm->get(current->starting_page_id + current->num_pages); 
     if(next_pages && next_pages->status == SpanState::FREE) {
+        size_t start = next_pages->starting_page_id;
+        size_t len = next_pages->num_pages;
+        unlinkPages(next_pages);
         current->num_pages += next_pages->num_pages;
         for(size_t idx = start; idx < (start + len); idx++) {
-            global_map.set(idx, current);
+                pm->set(idx, current);
         }
-        unlinkPages(next_pages);
+                //unlinkPages(next_pages); RETIRE 
     }
-    
     pushPages(current->num_pages - 1, current);
-    //Do I need to call e
+        //Do I need to call e
 }

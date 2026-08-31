@@ -22,7 +22,10 @@ PageMap& page_map() {
 
 PageHeap& page_heap() {
     if(!g_page_heap.mem_arena) {
-        g_page_heap.init_arena(&g_meta_arena);
+        g_page_heap.init_arena(&meta_arena());
+    }
+    if(!g_page_heap.pm) {
+        g_page_heap.pm = &page_map();
     }
     return g_page_heap;
 }
