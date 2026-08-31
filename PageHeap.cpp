@@ -6,16 +6,27 @@ void PageHeap::init_arena(MetaArena* arena) {
 }
 
 Span* PageHeap::popFreeSpan() {
-    if(!free_spans) {return nullptr;}
+    if(!free_spans) {
+        return static_cast<Span*>(mem_arena->allocate(sizeof(Span)));
+    }
     Span* s = free_spans;
     free_spans = free_spans->next;
     free_spans->prev = nullptr;
     return s;
 }
 
+//Pushes a retired span onto the free list;
 void PageHeap::pushFreeSpan(Span* s) {
-    free_spans->prev = s;
+    if(free_spans) {
+        free_spans->prev = s;
+    }
+    s->starting_page_id = 0;
+    s->num_pages = 0;
+
+    s->prev = nullptr;
     s->next = free_spans;
+    free_spans = s;
+
 }
 
 
@@ -37,7 +48,7 @@ bool PageHeap::refillPageHeap(size_t page_size) {
     size_t start = reinterpret_cast<uintptr_t>(fresh_mem) >> K_PAGE_SHIFT;
     size_t length = req_bytes >> K_PAGE_SHIFT;
 
-    Span* new_span = static_cast<Span*>(mem_arena->allocate(sizeof(Span)));
+    Span* new_span = popFreeSpan();
     if(!new_span) {
         munmap(fresh_mem, req_bytes);
         return false;
@@ -71,7 +82,7 @@ Span* PageHeap::popPages(size_t index, size_t page_length) {
     }
 
     //If greater page size than requested, carve from span and return new span
-    Span* new_span = static_cast<Span*>(mem_arena->allocate(sizeof(Span)));
+    Span* new_span = popFreeSpan();
     if(!new_span) {return nullptr;}
     new_span->starting_page_id = (s->starting_page_id + s->num_pages) - page_length;
     new_span->num_pages = page_length;
@@ -98,6 +109,24 @@ void PageHeap::unlinkPages(Span* s) {
     } else {
         Span* prev_span = s->prev;
         prev_span->next = s->next;
+    }
+}
+
+void PageHeap::retireSpan(Span* s) {
+    s->status = SpanState::FREE;
+    pushFreeSpan(s);
+}
+
+void PageHeap::mergeSpans(Span* s, Span* r) {
+    if(!s || !r) {return;}
+    size_t start = r->starting_page_id;
+    size_t len = r->num_pages;
+
+    unlinkPages(s);
+    s->num_pages += r->num_pages;
+    //retire r
+    for(size_t idx = start; idx < start + len; idx++) {
+        pm->set(idx, s);
     }
 }
 
@@ -143,29 +172,17 @@ void PageHeap::pageFree(Span* pages) {
         size_t prev_page_id = pages->starting_page_id - 1;
         Span* prev_pages = pm->get(prev_page_id);
 
-        //If prev_page is ALSO free, merge pages
+        //If prev_page exists and is ALSO free, merge pages
         if(prev_pages && prev_pages->status == SpanState::FREE) {
-            unlinkPages(prev_pages);
-            prev_pages->num_pages += pages->num_pages;
-            for(size_t idx = start; idx < (start + len); idx++) {
-                pm->set(idx, prev_pages);
-            }   
-            //unlinkPages(pages); RETIRE
+            mergeSpans(prev_pages, pages);
             current = prev_pages;
         }
     }
 
     Span* next_pages = pm->get(current->starting_page_id + current->num_pages); 
     if(next_pages && next_pages->status == SpanState::FREE) {
-        size_t start = next_pages->starting_page_id;
-        size_t len = next_pages->num_pages;
-        unlinkPages(next_pages);
-        current->num_pages += next_pages->num_pages;
-        for(size_t idx = start; idx < (start + len); idx++) {
-                pm->set(idx, current);
-        }
-                //unlinkPages(next_pages); RETIRE 
+        mergeSpans(current, next_pages);
     }
-    pushPages(current->num_pages - 1, current);
+    pushPages(current->num_pages, current);
         //Do I need to call e
 }

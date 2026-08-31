@@ -16,6 +16,7 @@ class PageHeap {
         Span* popFreeSpan();
         void pushFreeSpan(Span* s);
         Span* popPages(size_t index, size_t page_length);
+        void retireSpan(Span* s);
         void pushPages(size_t index, Span* s);
         void mergeSpans(Span* s, Span* r);
     public: 
