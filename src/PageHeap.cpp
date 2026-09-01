@@ -77,7 +77,7 @@ Span* PageHeap::popPages(size_t index, size_t page_length) {
     //If num_pages is free, return the span
     if(s->num_pages == page_length) {
         free_page_lists[index] = free_page_lists[index]->next;
-        free_page_lists[index]->prev == nullptr;
+        free_page_lists[index]->prev = nullptr;
         return s;
     }
 
