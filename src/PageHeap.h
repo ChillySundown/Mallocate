@@ -8,7 +8,7 @@
 class PageHeap {
     private:
         //Something something mutex
-        Span* free_page_lists[256] {nullptr};
+        Span* free_page_lists[256] {nullptr}; // idx = 0 - 1 page, idx = 254 - 255 pages, idx = 255 - 256<= pages
         Span* free_spans {nullptr};
 
         void unlinkPages(Span* s);

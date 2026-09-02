@@ -33,9 +33,11 @@ void PageHeap::pushFreeSpan(Span* s) {
 //Pushes a Span onto free_list[index]
 void PageHeap::pushPages(size_t page_size, Span* s) {
     assert(page_size != 0);
-    size_t index = std::min(page_size-1, static_cast<size_t>(255));
+    size_t index = std::min(page_size-1, MAX_PAGEHEAP_IDX);
     s->next = free_page_lists[index]; //Might cause index error
-    free_page_lists[index]->prev = s;
+    if(free_page_lists[index]) {
+        free_page_lists[index]->prev = s;
+    }
     free_page_lists[index] = s;
 }
 
@@ -86,10 +88,15 @@ Span* PageHeap::popPages(size_t index, size_t page_length) {
     if(!new_span) {return nullptr;}
     new_span->starting_page_id = (s->starting_page_id + s->num_pages) - page_length;
     new_span->num_pages = page_length;
+    if(index == MAX_PAGEHEAP_IDX) {
+        new_span->status = SpanState::LARGE_OBJ;
+    } else {
+        new_span->status = SpanState::IN_USE;
+    }
 
     //Maps each page in the span to the new_span
     for(size_t idx = new_span->starting_page_id; idx < new_span->starting_page_id + new_span->num_pages; idx++) {
-        global_map.set(new_span->starting_page_id, new_span);
+        global_map.set(idx, new_span);
     }
     
     //Relocate span to new region
@@ -103,7 +110,7 @@ Span* PageHeap::popPages(size_t index, size_t page_length) {
 
 void PageHeap::unlinkPages(Span* s) {
     assert(s != nullptr);
-    size_t idx = s->num_pages-1;
+    size_t idx = std::min(s->num_pages-1, MAX_PAGEHEAP_IDX);
     if(s == free_page_lists[idx]) {
         free_page_lists[idx] = s->next; //Uhh what if we keep moving head forward and have memory leak
     } else {
@@ -124,23 +131,21 @@ void PageHeap::mergeSpans(Span* s, Span* r) {
 
     unlinkPages(s);
     s->num_pages += r->num_pages;
-    //retire r
+    retireSpan(r);
     for(size_t idx = start; idx < start + len; idx++) {
         pm->set(idx, s);
     }
 }
-
-
 Span* PageHeap::pageAlloc(size_t page_size) {
-    size_t size_index = page_size - 1;
-    if(size_index < 1) {return nullptr;}
-    else if(size_index > 255) { size_index = 255;} //List of large pages
+    if(page_size == 0) {return nullptr;}
+    size_t size_index = std::min(page_size - 1, MAX_PAGEHEAP_IDX);
+    if(size_index > 255) { size_index = 255;} //List of large pages
     
     if(free_page_lists[size_index]) { //First: try to pop from respective page list
         return popPages(size_index, page_size);
     } else {
-        while(size_index < 255) { //Second: Iterate through all larger page lists until a free page is found
-            if(free_page_lists[size_index] != nullptr) {
+        while(size_index <= 255) { //Second: Iterate through all larger page lists until a free page is found
+            if(free_page_lists[size_index]) {
                 return popPages(size_index, page_size);
             } else {
                 size_index += 1;
@@ -168,7 +173,7 @@ void PageHeap::pageFree(Span* pages) {
     size_t len = pages->num_pages;
 
     Span* current = pages;
-    if(pages->starting_page_id > 0) {
+    if(pages->starting_page_id > 0) { //Backwards merge
         size_t prev_page_id = pages->starting_page_id - 1;
         Span* prev_pages = pm->get(prev_page_id);
 
