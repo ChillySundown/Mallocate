@@ -3,7 +3,8 @@
 #include "globals.h"
 #include "PageMap.h"
 #include <cmath>
-
+#include <random>
+#include <algorithm>
 /*
 Metadata Malloc tests
 -Alignment Test
@@ -131,11 +132,43 @@ TEST_CASE("Testing if PageHeap can allocate pages") {
     ph.init_arena(arena);
     ph.pm = pm;
 
-    //First allocation
-    Span* s1 = ph.pageAlloc(1);
-    Span* s2 = ph.pageAlloc(3);
-    Span* s3 = ph.pageAlloc(0);
-    CHECK(!s3);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 300);
 
+    //Allocating random values
+    std::vector<size_t> alloc_sizes(50);
+    for(auto i = 0; i < 50; i++) {
+        alloc_sizes[i] = dis(gen);
+    }
+    std::vector<Span*> spans;
+    for(auto n : alloc_sizes) {
+        auto* s = ph.pageAlloc(n);
+        if(n == 0) {    
+            CHECK(!s);  
+        }
+        spans.push_back(s);
+    }
+    
+    std::vector<int> idxs(50);
+    for(int i = 0; i < 50; i++) {
+        idxs.push_back(i);
+    }
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::shuffle(idxs.begin(), idxs.end(), std::default_random_engine(seed));
+    while(!idxs.empty()) {
+        int idx = idxs.back();
+        ph.pageFree(spans[idx]);
+        idxs.pop_back();
+    }
+
+    Span** free_lists = ph.getFreeLists();
+    for(int i = 0; i < 256; i++) {
+        Span* free_head = free_lists[i];
+        CHECK(!free_head->next);
+        if(i < MAX_PAGEHEAP_IDX) {
+            CHECK(free_head->num_pages == i+1);
+        }
+    }
 
 }

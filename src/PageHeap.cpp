@@ -5,6 +5,10 @@ void PageHeap::init_arena(MetaArena* arena) {
     mem_arena = arena;
 }
 
+Span** PageHeap::getFreeLists() {
+    return free_page_lists;
+}
+
 Span* PageHeap::popFreeSpan() {
     if(!free_spans) {
         if(!mem_arena) {
@@ -33,7 +37,6 @@ void PageHeap::pushFreeSpan(Span* s) {
     free_spans = s;
 
 }
-
 
 //Pushes a Span onto free_list[index]
 void PageHeap::pushPages(size_t page_size, Span* s) {
@@ -176,6 +179,7 @@ void PageHeap::pageFree(Span* pages) {
     //Check
     //Set pages->state to FREE eventually
     if(!pages) {return;}
+    else if(pages->status == SpanState::FREE) {return;}
     pages->status = SpanState::FREE;
 
     Span* current = pages;

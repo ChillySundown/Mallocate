@@ -22,6 +22,7 @@ class PageHeap {
     public: 
         MetaArena* mem_arena {nullptr};
         PageMap* pm {nullptr};
+        Span** getFreeLists();
         void init_arena(MetaArena* arena);
         Span* pageAlloc(size_t num_pages);
         void pageFree(Span* pages);
