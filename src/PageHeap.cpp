@@ -7,6 +7,9 @@ void PageHeap::init_arena(MetaArena* arena) {
 
 Span* PageHeap::popFreeSpan() {
     if(!free_spans) {
+        if(!mem_arena) {
+            return nullptr;
+        }
         return static_cast<Span*>(mem_arena->allocate(sizeof(Span)));
     }
     Span* s = free_spans;
@@ -20,10 +23,12 @@ void PageHeap::pushFreeSpan(Span* s) {
     if(free_spans) {
         free_spans->prev = s;
     }
+    //Clears value of span for cleanliness
     s->starting_page_id = 0;
     s->num_pages = 0;
-
     s->prev = nullptr;
+
+    //Pushes s onto free_list
     s->next = free_spans;
     free_spans = s;
 
@@ -50,14 +55,12 @@ bool PageHeap::refillPageHeap(size_t page_size) {
     size_t start = reinterpret_cast<uintptr_t>(fresh_mem) >> K_PAGE_SHIFT;
     size_t length = req_bytes >> K_PAGE_SHIFT;
 
+    bool ensure_pagemap = pm->ensure(start, length);
     Span* new_span = popFreeSpan();
-    if(!new_span) {
+    if(!new_span || !ensure_pagemap) {
         munmap(fresh_mem, req_bytes);
         return false;
     }
-
-    bool ensure_pagemap = pm->ensure(start, length);
-    if(!ensure_pagemap) {return false;}
 
     new_span->starting_page_id = start;
     new_span->num_pages = length;
@@ -74,16 +77,20 @@ bool PageHeap::refillPageHeap(size_t page_size) {
 Span* PageHeap::popPages(size_t index, size_t page_length) {
     //Assume that s->num_pages will never be smaller than page_length
     Span* s = free_page_lists[index];
-    PageMap& global_map = page_map();
+    PageMap* global_map = pm;
 
     //If num_pages is free, return the span
     if(s->num_pages == page_length) {
         free_page_lists[index] = free_page_lists[index]->next;
         free_page_lists[index]->prev = nullptr;
         return s;
+    } else { //If greater page size than requested, carve from span and return new span
+        Span* w = s->next;
+        while(w && w->num_pages < page_length) {
+            w = w->next;
+        }
+        s = w; //Set carved span to span with large enough page size.
     }
-
-    //If greater page size than requested, carve from span and return new span
     Span* new_span = popFreeSpan();
     if(!new_span) {return nullptr;}
     new_span->starting_page_id = (s->starting_page_id + s->num_pages) - page_length;
@@ -96,7 +103,7 @@ Span* PageHeap::popPages(size_t index, size_t page_length) {
 
     //Maps each page in the span to the new_span
     for(size_t idx = new_span->starting_page_id; idx < new_span->starting_page_id + new_span->num_pages; idx++) {
-        global_map.set(idx, new_span);
+        global_map->set(idx, new_span);
     }
     
     //Relocate span to new region
@@ -116,6 +123,9 @@ void PageHeap::unlinkPages(Span* s) {
     } else {
         Span* prev_span = s->prev;
         prev_span->next = s->next;
+        if(s->next->prev) {
+            s->next->prev = prev_span;
+        }
     }
 }
 
@@ -129,7 +139,6 @@ void PageHeap::mergeSpans(Span* s, Span* r) {
     size_t start = r->starting_page_id;
     size_t len = r->num_pages;
 
-    unlinkPages(s);
     s->num_pages += r->num_pages;
     retireSpan(r);
     for(size_t idx = start; idx < start + len; idx++) {
@@ -169,9 +178,6 @@ void PageHeap::pageFree(Span* pages) {
     if(!pages) {return;}
     pages->status = SpanState::FREE;
 
-    size_t start = pages->starting_page_id;
-    size_t len = pages->num_pages;
-
     Span* current = pages;
     if(pages->starting_page_id > 0) { //Backwards merge
         size_t prev_page_id = pages->starting_page_id - 1;
@@ -179,6 +185,7 @@ void PageHeap::pageFree(Span* pages) {
 
         //If prev_page exists and is ALSO free, merge pages
         if(prev_pages && prev_pages->status == SpanState::FREE) {
+            unlinkPages(prev_pages);
             mergeSpans(prev_pages, pages);
             current = prev_pages;
         }
@@ -186,6 +193,7 @@ void PageHeap::pageFree(Span* pages) {
 
     Span* next_pages = pm->get(current->starting_page_id + current->num_pages); 
     if(next_pages && next_pages->status == SpanState::FREE) {
+        unlinkPages(next_pages);
         mergeSpans(current, next_pages);
     }
     pushPages(current->num_pages, current);

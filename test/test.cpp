@@ -118,7 +118,24 @@ TEST_CASE("Testing if PageMap operations are idempotent") {
         a.num_pages = 1;
         CHECK(p_map.get(c.starting_page_id) == nullptr);
         
-
-        
     }
+}
+
+/*
+PAGEHEAP TESTS
+*/
+TEST_CASE("Testing if PageHeap can allocate pages") {
+    MetaArena* arena;
+    PageMap* pm;
+    PageHeap ph; 
+    ph.init_arena(arena);
+    ph.pm = pm;
+
+    //First allocation
+    Span* s1 = ph.pageAlloc(1);
+    Span* s2 = ph.pageAlloc(3);
+    Span* s3 = ph.pageAlloc(0);
+    CHECK(!s3);
+
+
 }
