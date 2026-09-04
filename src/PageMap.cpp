@@ -7,7 +7,7 @@ int getPageRootIdx(size_t page_id) {
 }
 
 int getPageBranchIdx(size_t page_id) {
-    return page_id >> (PAGEMAP_LEAF_BITS) & (PAGEMAP_LEAF_SIZE-1);
+    return page_id >> (PAGEMAP_LEAF_BITS) & (PAGEMAP_BRANCH_SIZE-1);
 }
 
 int getPageLeafIdx(size_t page_id) {
@@ -45,7 +45,9 @@ void PageMap::set(size_t page_id, Span* span) {
     int leaf_idx = getPageLeafIdx(page_id);
 
     auto* branch_entry = map_root.arr[root_idx];
+    assert(branch_entry); //Checks to make sure branch_entry is good
     auto* leaf_entry  = branch_entry->arr[branch_idx];
+    assert(leaf_entry);
     leaf_entry->arr[leaf_idx] = span;
 }
 

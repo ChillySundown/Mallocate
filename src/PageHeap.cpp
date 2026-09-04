@@ -18,7 +18,9 @@ Span* PageHeap::popFreeSpan() {
     }
     Span* s = free_spans;
     free_spans = free_spans->next;
-    free_spans->prev = nullptr;
+    if(free_spans) {
+        free_spans->prev = nullptr;
+    }
     return s;
 }
 
@@ -67,6 +69,9 @@ bool PageHeap::refillPageHeap(size_t page_size) {
 
     new_span->starting_page_id = start;
     new_span->num_pages = length;
+    if(req_bytes == (page_size * K_PAGE_SIZE)) {
+        new_span->status = SpanState::LARGE_OBJ;
+    }
     //All spans default state is SpanState::FREE
 
     for(size_t idx = start; idx < (start + length); idx++) {
@@ -84,33 +89,26 @@ Span* PageHeap::popPages(size_t index, size_t page_length) {
 
     //If num_pages is free, return the span
     if(s->num_pages == page_length) {
-        free_page_lists[index] = free_page_lists[index]->next;
-        free_page_lists[index]->prev = nullptr;
+        unlinkPages(s);
+        s->status = SpanState::IN_USE;
         return s;
     } else { //If greater page size than requested, carve from span and return new span
-        Span* w = s->next;
-        while(w && w->num_pages < page_length) {
-            w = w->next;
+        while(s && s->num_pages < page_length) {
+            s = s->next;
         }
-        s = w; //Set carved span to span with large enough page size.
     }
     Span* new_span = popFreeSpan();
     if(!new_span) {return nullptr;}
     new_span->starting_page_id = (s->starting_page_id + s->num_pages) - page_length;
     new_span->num_pages = page_length;
-    if(index == MAX_PAGEHEAP_IDX) {
-        new_span->status = SpanState::LARGE_OBJ;
-    } else {
-        new_span->status = SpanState::IN_USE;
-    }
-
+    new_span->status = SpanState::IN_USE;
     //Maps each page in the span to the new_span
     for(size_t idx = new_span->starting_page_id; idx < new_span->starting_page_id + new_span->num_pages; idx++) {
         global_map->set(idx, new_span);
     }
     
     //Relocate span to new region
-    free_page_lists[index] = free_page_lists[index]->next;
+    unlinkPages(s);
     s->num_pages -= page_length; 
     pushPages(s->num_pages, s);
 
@@ -126,7 +124,7 @@ void PageHeap::unlinkPages(Span* s) {
     } else {
         Span* prev_span = s->prev;
         prev_span->next = s->next;
-        if(s->next->prev) {
+        if(s->next && s->next->prev) {
             s->next->prev = prev_span;
         }
     }
@@ -149,7 +147,7 @@ void PageHeap::mergeSpans(Span* s, Span* r) {
     }
 }
 Span* PageHeap::pageAlloc(size_t page_size) {
-    if(page_size == 0) {return nullptr;}
+    if(page_size <= 0) {return nullptr;}
     size_t size_index = std::min(page_size - 1, MAX_PAGEHEAP_IDX);
     if(size_index > 255) { size_index = 255;} //List of large pages
     

@@ -126,20 +126,23 @@ TEST_CASE("Testing if PageMap operations are idempotent") {
 PAGEHEAP TESTS
 */
 TEST_CASE("Testing if PageHeap can allocate pages") {
-    MetaArena* arena;
-    PageMap* pm;
+    MetaArena arena;
+    PageMap pm;
     PageHeap ph; 
-    ph.init_arena(arena);
-    ph.pm = pm;
+    ph.init_arena(&arena);
+    pm.init_arena(&arena);
+    ph.pm = &pm;
 
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, 300);
 
     //Allocating random values
+    size_t total_pages = 0;
     std::vector<size_t> alloc_sizes(50);
     for(auto i = 0; i < 50; i++) {
         alloc_sizes[i] = dis(gen);
+        total_pages += alloc_sizes[i];
     }
     std::vector<Span*> spans;
     for(auto n : alloc_sizes) {
@@ -152,7 +155,7 @@ TEST_CASE("Testing if PageHeap can allocate pages") {
     
     std::vector<int> idxs(50);
     for(int i = 0; i < 50; i++) {
-        idxs.push_back(i);
+        idxs[i] = i;
     }
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::shuffle(idxs.begin(), idxs.end(), std::default_random_engine(seed));
@@ -163,12 +166,7 @@ TEST_CASE("Testing if PageHeap can allocate pages") {
     }
 
     Span** free_lists = ph.getFreeLists();
-    for(int i = 0; i < 256; i++) {
-        Span* free_head = free_lists[i];
-        CHECK(!free_head->next);
-        if(i < MAX_PAGEHEAP_IDX) {
-            CHECK(free_head->num_pages == i+1);
-        }
-    }
+    CHECK(free_lists[MAX_PAGEHEAP_IDX]);
+    CHECK(free_lists[MAX_PAGEHEAP_IDX]->num_pages == total_pages);
 
 }
